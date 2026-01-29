@@ -7,7 +7,7 @@ from .serializers import ProductSerializer
 # Create your views here.
 
 
-class ProductListApiView(ListAPIView):
+class ProductListAPIView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ProductSerializer
     queryset = Product.objects.filter(is_active=True)
