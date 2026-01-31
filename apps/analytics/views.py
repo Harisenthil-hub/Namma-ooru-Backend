@@ -213,3 +213,4 @@ class AdminChartAnalyticsAPIView(APIView):
         cache.set(cache_key,data,timeout=1)
 
         return Response(data,status=status.HTTP_200_OK)
+
