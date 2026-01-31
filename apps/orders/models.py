@@ -15,7 +15,8 @@ class Customer(models.Model):
 class Order(models.Model):
     ORDER_STATUS_CHOICES = [
         ('pending','Pending'),
-        ('confirmed','Confirmed')
+        ('confirmed','Confirmed'),
+        ('cancelled','Cancelled')
     ]
 
     customer = models.ForeignKey(
@@ -27,15 +28,17 @@ class Order(models.Model):
     order_status = models.CharField(
         max_length=20,
         choices=ORDER_STATUS_CHOICES,
-        default='pending'
+        default='pending',
+        db_index=True,
+
     )
 
     sub_total = models.DecimalField(max_digits=10,decimal_places=2)
     tax = models.DecimalField(max_digits=10,decimal_places=2,default=0)
     total_amount = models.DecimalField(max_digits=10,decimal_places=2)
 
-    buy_now_clicked_at = models.DateTimeField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    buy_now_clicked_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True,db_index=True)
     update_at = models.DateTimeField(auto_now=True)
 
 
