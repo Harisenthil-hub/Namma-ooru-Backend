@@ -125,7 +125,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -151,3 +151,13 @@ SIMPLE_JWT={
     'AUTH_HEADERS_TYPE': ('Bearer',),
 }
 
+
+INSTALLED_APPS += [
+    "django_celery_beat",
+]
+
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_TIMEZONE = "Asia/Kolkata"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
