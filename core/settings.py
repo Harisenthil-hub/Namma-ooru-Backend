@@ -51,9 +51,13 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.orders',
     'apps.analytics',
+    'corsheaders',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -152,12 +156,38 @@ SIMPLE_JWT={
 }
 
 
-INSTALLED_APPS += [
-    "django_celery_beat",
-]
 
 CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+
+# Cors Setup
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173'
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers)  + [
+    'X-CSRFToken'
+]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173'
+]
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+
+SESSION_COOKIE_SECURE = False # True in Production (HTTPS)
+CSRF_COOKIE_SECURE = False
+
+
