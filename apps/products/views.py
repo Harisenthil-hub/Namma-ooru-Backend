@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
-from .models import Product
-from .serializers import ProductSerializer
+from .models import Product, Category
+from .serializers import ProductSerializer, CategorySerializer
 from apps.orders.models import OrderItem
 from rest_framework.response import Response
 from rest_framework import status
@@ -65,11 +65,13 @@ class HomeProductAPIView(APIView):
             products.extend(list(latest_products))
 
 
-        data = ProductSerializer(products, many=True).data
+        data = ProductSerializer(products, many=True,context={ 'request':request }).data
         cache.set(cache_key, data, timeout=10)
 
         return Response(data, status=status.HTTP_200_OK)
 
 
-
+class CategoryListAPIView(ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
 
