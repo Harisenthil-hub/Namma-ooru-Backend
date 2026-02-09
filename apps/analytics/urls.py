@@ -3,7 +3,7 @@ from .views import AdminSummaryAnalyticsAPIView, AdminPendingAnalyticsAPIView, A
 
 
 urlpatterns = [
-    path('admin/analytics/summary/',AdminSummaryAnalyticsAPIView.as_view(),name='admin-analytics-summary'),
-    path('admin/analytics/pending/',AdminPendingAnalyticsAPIView.as_view(),name='admin-pending-analytics'),
-    path('admin/analytics/charts/',AdminChartAnalyticsAPIView.as_view(),name='admin-chart-analytics'),
+    path('admin/summary/',AdminSummaryAnalyticsAPIView.as_view(),name='admin-analytics-summary'),
+    path('admin/pending/',AdminPendingAnalyticsAPIView.as_view(),name='admin-pending-analytics'),
+    path('admin/charts/',AdminChartAnalyticsAPIView.as_view(),name='admin-chart-analytics'),
 ]

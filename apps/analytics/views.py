@@ -9,6 +9,8 @@ from decimal import Decimal
 from apps.orders.models import Order, OrderItem
 from django.utils import timezone
 from django.db.models.functions import TruncDate
+from datetime import timedelta
+
 
 
 # Create your views here.
@@ -122,37 +124,42 @@ class AdminChartAnalyticsAPIView(APIView):
             return Response(cached_data,status=status.HTTP_200_OK)
 
 
-        # 1) Order Activity Trend (Intent vs Confirmed)
+        # 1) Order Activity Trend (Intent vs Confirmed) 
 
+        today = timezone.localdate()
+        days = 7 # change it on production
+        # Generate last 30 days list
+        date_list = [today - timedelta(days=i) for i in range(days)]
+        date_list.reverse()
+
+        current_tz = timezone.get_current_timezone()
+
+        # Total Orders per day
         total_orders_qs = (
             Order.objects
-            .filter(buy_now_clicked_at__isnull=False)
-            .annotate(date=TruncDate('buy_now_clicked_at'))
+            .annotate(date=TruncDate('created_at', tzinfo=current_tz))
             .values('date')
             .annotate(count=Count('id'))
-            .order_by('date')
         )
-        
+
+        # Confirmed Orders per day
         confirmed_qs = (
             Order.objects
             .filter(order_status='confirmed')
-            .annotate(date=TruncDate('buy_now_clicked_at'))
+            .annotate(date=TruncDate('created_at', tzinfo=current_tz))
             .values('date')
             .annotate(count=Count('id'))
-            .order_by('date')
         )
 
+        # Convert QuerySet to dictionary
+        total_map = {item['date']: item['count'] for item in total_orders_qs if item['date']}
+        confirmed_map = {item['date']: item['count'] for item in confirmed_qs if item['date']}
 
-        total_orders_map = {str(i['date']): i['count'] for i in total_orders_qs}
-        confirmed_map = {str(c['date']): c['count'] for c in confirmed_qs}
-
-
-        labels = sorted(set(total_orders_map.keys()) | set(confirmed_map.keys()))
-
+        # Prepare final response (day-wise)
         order_activity_trend = {
-            'labels': labels,
-            'total_orders': [ total_orders_map.get(d,0) for d in labels ],
-            'confirmed_orders': [ confirmed_map.get(d,0) for d in labels ],
+            "labels": [str(d) for d in date_list],
+            "total_orders": [total_map.get(d, 0) for d in date_list],
+            "confirmed_orders": [confirmed_map.get(d, 0) for d in date_list],
         }
 
         # 2) Order Status Distribution
@@ -162,14 +169,13 @@ class AdminChartAnalyticsAPIView(APIView):
             cancelled=Count('id',filter=Q(order_status='cancelled'))
         )
 
-
         # 3) Top Products by orders
         top_products = (
             OrderItem.objects
             .filter(order__order_status='confirmed')
             .values('product_name')
             .annotate(orders=Count('id'))
-            .order_by('-orders')[:5]
+            .order_by('-orders')[:10]
         )
 
         top_products_by_confirmed_orders = [
@@ -205,7 +211,7 @@ class AdminChartAnalyticsAPIView(APIView):
 
         data = {
             'order_activity_trend': order_activity_trend,
-            'order_status_distribution': status_distribution,
+            'status_distribution': status_distribution,
             'top_products_by_confirmed_orders': top_products_by_confirmed_orders,
             'top_selling_categories': top_selling_categories
         }
