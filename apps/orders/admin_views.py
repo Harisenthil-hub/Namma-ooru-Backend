@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Q, Count, Sum, Max
 from django.core.cache import cache
 from datetime import timedelta
+from .pagination import AdminOrderPagination
 
 
 from .models import Order, Customer
@@ -16,6 +17,7 @@ from .serializers import AdminOrderListSerializer, AdminCustomerListSerializer
 class AdminOrderListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminOrderListSerializer
+    pagination_class = AdminOrderPagination
 
     def get_queryset(self):
 
@@ -81,6 +83,7 @@ class AdminOrderStatusUpdateAPIView(APIView):
 class AdminCustomerListAPIVies(ListAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminCustomerListSerializer
+    pagination_class = AdminOrderPagination # same Pagination as Order list
 
     def get_queryset(self):
         search = self.request.query_params.get('search','').strip()
