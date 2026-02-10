@@ -2,11 +2,13 @@ from rest_framework.generics import ListAPIView, CreateAPIView , RetrieveUpdateA
 from rest_framework.permissions import IsAdminUser
 from .models import Product
 from .serializers import ProductSerializer
+from .pagination import AdminProductPagination
 
 
 class AdminProductListAPIView(ListAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
+    pagination_class = AdminProductPagination
 
 class AdminProductCreateAPIView(CreateAPIView):
     permission_classes = [IsAdminUser]

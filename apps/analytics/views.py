@@ -25,21 +25,25 @@ class AdminSummaryAnalyticsAPIView(APIView):
         if cached_data:
             return Response(cached_data,status=status.HTTP_200_OK)
 
+        last_30_days = timezone.now() - timedelta(days=30)
+        
 
         # DB lookups for Analytics
+        
+        orders = Order.objects.filter(buy_now_clicked_at__gte=last_30_days)
 
         # Return Total orders
-        total_orders = Order.objects.filter(buy_now_clicked_at__isnull=False).count()
+        total_orders = orders.count()
         # Return Pending orders
-        pending_orders = Order.objects.filter(order_status='pending').count()
+        pending_orders = orders.filter(order_status='pending').count()
         # Return Confirmed orders
-        confirmed_orders = Order.objects.filter(order_status='confirmed').count()
+        confirmed_orders = orders.filter(order_status='confirmed').count()
         # Return Confirmed orders Value
-        confirmed_value = Order.objects.filter(order_status='confirmed').aggregate(
+        confirmed_value = orders.filter(order_status='confirmed').aggregate(
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
         # Return Pending orders Value
-        pending_value = Order.objects.filter(order_status='pending').aggregate(
+        pending_value = orders.filter(order_status='pending').aggregate(
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
 
@@ -62,7 +66,7 @@ class AdminSummaryAnalyticsAPIView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
 
-
+# not connected with front end
 class AdminPendingAnalyticsAPIView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -123,12 +127,9 @@ class AdminChartAnalyticsAPIView(APIView):
         if cached_data:
             return Response(cached_data,status=status.HTTP_200_OK)
 
-
         # 1) Order Activity Trend (Intent vs Confirmed) 
-
         today = timezone.localdate()
-        days = 7 # change it on production
-        # Generate last 30 days list
+        days = 30
         date_list = [today - timedelta(days=i) for i in range(days)]
         date_list.reverse()
 
@@ -151,11 +152,8 @@ class AdminChartAnalyticsAPIView(APIView):
             .annotate(count=Count('id'))
         )
 
-        # Convert QuerySet to dictionary
         total_map = {item['date']: item['count'] for item in total_orders_qs if item['date']}
         confirmed_map = {item['date']: item['count'] for item in confirmed_qs if item['date']}
-
-        # Prepare final response (day-wise)
         order_activity_trend = {
             "labels": [str(d) for d in date_list],
             "total_orders": [total_map.get(d, 0) for d in date_list],
@@ -163,16 +161,22 @@ class AdminChartAnalyticsAPIView(APIView):
         }
 
         # 2) Order Status Distribution
-        status_distribution = Order.objects.aggregate(
+
+        last_30_days = timezone.now() - timedelta(days=30)
+        status_distribution = ( Order.objects
+        .filter(created_at__gte=last_30_days)
+        .aggregate(
             pending=Count('id',filter=Q(order_status='pending')),
             confirmed=Count('id',filter=Q(order_status='confirmed')),
             cancelled=Count('id',filter=Q(order_status='cancelled'))
+        )
         )
 
         # 3) Top Products by orders
         top_products = (
             OrderItem.objects
-            .filter(order__order_status='confirmed')
+            .filter(order__order_status='confirmed',
+                    order__created_at__gte=last_30_days)
             .values('product_name')
             .annotate(orders=Count('id'))
             .order_by('-orders')[:10]
@@ -187,26 +191,39 @@ class AdminChartAnalyticsAPIView(APIView):
         ]
 
         # 4) Top Selling Categories (Confirmed)
-
-        top_categories = (
+        top_categories_qs = (
             OrderItem.objects
-            .filter(order__order_status='confirmed')
-            .values('product__category')
+            .filter(
+                order__order_status='confirmed',
+                order__created_at__gte=last_30_days
+            )
+            .values('product__category__name')
             .annotate(
                 revenue=Sum('total_price'),
-                orders=Count('order',distinct=True)
+                orders=Count('order', distinct=True)
             )
-            .order_by('-revenue')[:5]
+            .order_by('-revenue')[:7]
         )
+        top_categories = []
+        total_revenue = Decimal('0.00')
+        total_orders = 0
 
-        top_selling_categories = [
-            {
-                'category': item['product__category'],
-                'revenue': item['revenue'] or Decimal('0.00'),
-                'orders': item['orders']
-            }
-            for item in top_categories
-        ]
+        for item in top_categories_qs:
+            revenue = item['revenue'] or Decimal('0.00')
+            orders = item['orders']
+            total_revenue += revenue
+            total_orders += orders
+            top_categories.append({
+                'category': item['product__category__name'],
+                'revenue': float(revenue),
+                'orders': orders
+            })
+
+        top_selling_categories = {
+            "top_categories": top_categories,
+            "total_revenue": float(total_revenue),
+            "total_orders": total_orders
+        }
 
 
         data = {
@@ -220,3 +237,52 @@ class AdminChartAnalyticsAPIView(APIView):
 
         return Response(data,status=status.HTTP_200_OK)
 
+
+class AdminRecentOrdersAnalyticsAPIView(APIView):
+    permission_classes=[IsAdminUser]
+    
+    def get(self,request):
+        
+        today_date = timezone.localdate()
+        cache_key = f"admin_recent_orders{today_date}"
+        
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+        
+        # Start and End time of the day
+        start_of_day=timezone.make_aware(timezone.datetime.combine(today_date,timezone.datetime.min.time()))
+        end_of_day=timezone.make_aware(timezone.datetime.combine(today_date,timezone.datetime.max.time()))
+        
+        recent_orders_qs = (
+            Order.objects
+            .filter(created_at__range=(start_of_day,end_of_day))
+            .select_related('customer')
+            .annotate(items_count=Count('items'))
+            .order_by('-created_at')[:2]
+        )
+        
+        
+        results=[]
+        for order in recent_orders_qs:
+            results.append({
+                'order_number': order.order_number,
+                'customer_name': order.customer.name,
+                'phone_no': order.customer.phone_no,
+                'total_amount': order.total_amount,
+                'items_count': order.items_count,
+                'status': order.order_status,
+                'created_at': order.created_at
+            })
+            
+        
+        data = {
+            'date': str(today_date),
+            'recent_orders': results
+        }
+        cache.set(cache_key,data,timeout=1)
+    
+        return Response(data,status=status.HTTP_200_OK)
+        
+        
+        
