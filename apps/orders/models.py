@@ -7,6 +7,7 @@ class Customer(models.Model):
     email = models.EmailField(max_length=100,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_address = models.TextField(blank=True,null=True)
 
     def __str__(self):
         return f"{self.name} - {self.phone_no}"
@@ -39,7 +40,8 @@ class Order(models.Model):
 
     buy_now_clicked_at = models.DateTimeField(db_index=True)
     created_at = models.DateTimeField(auto_now_add=True,db_index=True)
-    update_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    shipping_address = models.TextField(null=True,blank=True)
 
 
     def __str__(self):

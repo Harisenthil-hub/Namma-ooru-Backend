@@ -4,13 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from django.db.models import Q, Count, Sum, Max
+from django.db.models import Q, Count, Sum, Max, Prefetch
 from django.core.cache import cache
 from datetime import timedelta
 from .pagination import AdminOrderPagination
 
 
-from .models import Order, Customer
+from .models import Order, Customer, OrderItem
 from .serializers import AdminOrderListSerializer, AdminCustomerListSerializer
 
 
@@ -21,7 +21,17 @@ class AdminOrderListAPIView(ListAPIView):
 
     def get_queryset(self):
 
-        qs = Order.objects.select_related('customer').only(
+        qs = Order.objects.select_related('customer').prefetch_related(
+            Prefetch(
+                'items',
+                queryset=OrderItem.objects.select_related('product').only(
+                    'order_id',
+                    'product_id',
+                    'quantity',
+                    'unit_price',
+                )
+            )
+        ).only(
             'order_number', 'order_status', 'total_amount', 'created_at',
              'customer__name', 'customer__phone_no'
         ).order_by('-created_at')
