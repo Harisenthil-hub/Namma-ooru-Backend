@@ -1,7 +1,7 @@
 from rest_framework.generics import ListAPIView, CreateAPIView , RetrieveUpdateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAdminUser
-from .models import Product
-from .serializers import ProductSerializer
+from .models import Product, ProductVariant
+from .serializers import ProductSerializer, ProductVariantSerializer
 from .pagination import AdminProductPagination
 
 
@@ -30,3 +30,19 @@ class AdminProductDeleteAPIView(DestroyAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
     lookup_field = 'id'
+    
+    
+class AdminProductVariantCreateAPIView(CreateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ProductVariantSerializer
+    
+    
+class AdminProductVariantUpdateAPIView(RetrieveUpdateAPIView):
+    permission_classes = IsAdminUser
+    serializer_class = ProductVariantSerializer
+    queryset = ProductVariant.objects.all()
+    
+    
+class AdminProductVariantDeleteAPIView(DestroyAPIView):
+    permission_classes = IsAdminUser
+    queryset = ProductVariant.objects.all()

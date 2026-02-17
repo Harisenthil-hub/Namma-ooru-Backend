@@ -60,6 +60,9 @@ class OrderItem(models.Model):
         'products.Product',
         on_delete=models.PROTECT
     )
+    
+    variant = models.ForeignKey('products.ProductVariant',on_delete=models.PROTECT,blank=True,null=True)
+    variant_weight = models.CharField(max_length=50,blank=True,null=True)
 
     product_name = models.CharField(max_length=200)
     unit_price = models.DecimalField(max_digits=10,decimal_places=2)
