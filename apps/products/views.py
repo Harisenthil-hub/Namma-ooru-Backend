@@ -8,7 +8,7 @@ from apps.orders.models import OrderItem
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Prefetch, Q, OuterRef, Exists
 from .pagination import UserProductPagination
 from rest_framework.filters import SearchFilter
 from django.core.cache import cache
@@ -46,8 +46,6 @@ class ProductListAPIView(ListAPIView):
             
         return (queryset)
     
-    
-
 
 class HomeProductAPIView(APIView):
 
@@ -59,38 +57,51 @@ class HomeProductAPIView(APIView):
         if cached_data:
             return Response(cached_data)
 
-
-        top_products_ids = list(
+        # Take only Products are active (Base query)
+        base_qs = Product.objects.filter(is_active=True)
+        
+        # Check if a Product has an active variant (Sub query)
+        offer_variant_subquery = ProductVariant.objects.filter(
+            product=OuterRef('pk'),
+            is_active=True,
+            offer_price__gt=0
+        )
+        
+        # Getting Top selling Product Ids (Step 1)
+        top_ids = list(
             OrderItem.objects
             .filter(order__order_status='confirmed')
             .values('product_id')
-            .annotate(orders=Count('id'))
-            .order_by('-orders')
+            .annotate(total_orders=Count('id'))
+            .order_by('-total_orders')
             .values_list('product_id',flat=True)[:5]
         )
+        
+        # Fetching Top Products (Step 2)
+        products = list(base_qs.filter(id__in=top_ids))
+        
 
-        products = list(
-            Product.objects.filter(id__in=top_products_ids, is_active=True)
-        )
-
-        # Fallback --> Offer Products
+        # Fallback --> Offer Products (Step 3)
         if len(products) < 5:
             remaining = 5 - len(products)
             offer_products = (
-                Product.objects.filter(is_active=True, offer_badge=True)
+                base_qs
+                .annotate(has_offer=Exists(offer_variant_subquery))
+                .filter(has_offer=True)
                 .exclude(id__in=[p.id for p in products])
                 .order_by('-created_at')[:remaining]
             )
             products.extend(list(offer_products))
 
-        # Fallback --> Latest Products
+
+
+        # Fallback --> Latest Products (Step 4)
         if len(products) < 5 :
             remaining = 5 - len(products)
             latest_products = (
-                Product.objects
-                .filter(is_active=True)
+                base_qs
                 .exclude(id__in=[p.id for p in products])
-                .order_by('created_at')[:remaining]
+                .order_by('-created_at')[:remaining]
             )
             products.extend(list(latest_products))
 

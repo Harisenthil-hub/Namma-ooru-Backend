@@ -33,7 +33,7 @@ class AdminOrderListAPIView(ListAPIView):
             )
         ).only(
             'order_number', 'order_status', 'total_amount', 'created_at',
-             'customer__name', 'customer__phone_no'
+             'customer__name', 'customer__phone_no','shipping_address'
         ).order_by('-created_at')
 
 

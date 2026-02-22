@@ -31,6 +31,7 @@ class AdminOrderListSerializer(serializers.ModelSerializer):
             "created_at",
             "pending_minutes",
             "items",
+            "shipping_address"
         ]
 
     def get_pending_minutes(self, obj):

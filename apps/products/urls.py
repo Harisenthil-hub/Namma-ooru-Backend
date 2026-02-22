@@ -13,6 +13,6 @@ urlpatterns = [
     path('update-product/<int:id>/',AdminProductUpdateAPIView.as_view(),name='update-product'),
     path('delete-product/<int:id>/',AdminProductDeleteAPIView.as_view(),name='delete-product'),
     path('variants/',AdminProductVariantCreateAPIView.as_view(),name='create-variant'),
-    path('variants/<int:id>/',AdminProductVariantUpdateAPIView.as_view(),name='update-variant'),
+    path('update-variants/<int:product_id>/',AdminProductVariantUpdateAPIView.as_view(),name='update-variant'),
     path('variants/<int:id>/',AdminProductVariantDeleteAPIView.as_view(),name='delete-variant'),
 ]
