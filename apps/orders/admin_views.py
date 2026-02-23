@@ -45,8 +45,9 @@ class AdminOrderListAPIView(ListAPIView):
 
         if search:
             qs = qs.filter(
-                Q(order_number__startswith=search) |
-                Q(customer__phone_no__startswith=search)
+                Q(order_number__icontains=search) |
+                Q(customer__phone_no__icontains=search) |
+                Q(customer__name__icontains=search)
             )
 
         return qs
