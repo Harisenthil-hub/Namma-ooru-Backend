@@ -61,4 +61,31 @@ class AdminProductCreateSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id','name']
+        fields = ['id','name','image']
+        
+
+class AdminCategorySerializer(serializers.ModelSerializer):
+    product_count = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = Category
+        fields = [
+            'id',
+            'name',
+            'image',
+            'is_active',
+            'created_at',
+            'product_count'
+        ]
+        
+class AdminCreateCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['name','image','is_active']
+        
+    def validate_name(self,value):
+        category_id = self.instance.id if self.instance else None
+        if Category.objects.filter(name__iexact=value)\
+        .exclude(id=category_id).exists():
+            raise serializers.ValidationError("Category already Exists")
+        return value

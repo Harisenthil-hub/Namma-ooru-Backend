@@ -2,6 +2,8 @@ from django.urls import path
 from .views import ProductListAPIView, HomeProductAPIView, CategoryListAPIView, ProductSearchSuggestionAPIView
 from .admin_views import AdminProductListAPIView, AdminProductCreateAPIView, AdminProductUpdateAPIView, AdminProductDeleteAPIView
 from .admin_views import AdminProductVariantCreateAPIView, AdminProductVariantUpdateAPIView, AdminProductVariantDeleteAPIView
+from .admin_views import AdminCategoryListAPIView, AdminCreatCategoryAPIView, AdminUpdateCategoryAPIView
+
 
 urlpatterns = [
     path('home/',HomeProductAPIView.as_view(),name='home-products'),
@@ -15,4 +17,7 @@ urlpatterns = [
     path('variants/',AdminProductVariantCreateAPIView.as_view(),name='create-variant'),
     path('update-variants/<int:product_id>/',AdminProductVariantUpdateAPIView.as_view(),name='update-variant'),
     path('variants/<int:id>/',AdminProductVariantDeleteAPIView.as_view(),name='delete-variant'),
+    path('admin-categories/',AdminCategoryListAPIView.as_view(),name='admin-category'),
+    path('create-category/',AdminCreatCategoryAPIView.as_view(),name='create-category'),
+    path('update-category/<int:pk>/',AdminUpdateCategoryAPIView.as_view(),name='update-category'),
 ]

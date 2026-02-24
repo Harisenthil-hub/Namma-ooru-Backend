@@ -98,12 +98,8 @@ class AdminCustomerListAPIVies(ListAPIView):
 
     def get_queryset(self):
         search = self.request.query_params.get('search','').strip()
-        cache_key = f'admin_customer_list:{search}'
-
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return cached_data
-
+        print(search)
+       
         qs = (
             Customer.objects
             .annotate(
@@ -113,17 +109,17 @@ class AdminCustomerListAPIVies(ListAPIView):
             )
             .order_by('-last_order_at')
         )
+        
+       
 
         if search:
             qs = qs.filter(
-                Q(phone_no__startswith=search) |
-                Q(name__istartswith=search)
+                Q(phone_no__icontains=search) |
+                Q(name__icontains=search)
             )
+            print(qs)
 
-        result = list(qs)
-        cache.set(cache_key,result,timeout=60)
-
-        return result
+        return qs
 
 
         

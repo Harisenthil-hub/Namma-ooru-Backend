@@ -1,13 +1,16 @@
 from rest_framework.generics import ListAPIView, CreateAPIView , RetrieveUpdateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAdminUser
-from .models import Product, ProductVariant
-from .serializers import ProductSerializer, ProductVariantSerializer, AdminProductCreateSerializer
-from .pagination import AdminProductPagination
+from .models import Product, ProductVariant, Category
+from .serializers import ProductSerializer, ProductVariantSerializer, AdminProductCreateSerializer, AdminCategorySerializer
+from .serializers import AdminCreateCategorySerializer
+from .pagination import AdminProductPagination, AdminCategoryPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 from rest_framework.filters import SearchFilter
+from django.db.models import Count
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class AdminProductListAPIView(ListAPIView):
@@ -119,5 +122,36 @@ class AdminProductVariantUpdateAPIView(APIView):
             
     
 class AdminProductVariantDeleteAPIView(DestroyAPIView):
-    permission_classes = IsAdminUser
+    permission_classes = [IsAdminUser]
     queryset = ProductVariant.objects.all()
+    
+    
+class AdminCategoryListAPIView(ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminCategorySerializer
+    pagination_class = AdminCategoryPagination
+    
+    def get_queryset(self):
+        return (
+            Category.objects
+            .annotate(product_count=Count('products',distinct=True))
+            .order_by('-created_at')
+        )
+        
+        
+        
+class AdminCreatCategoryAPIView(CreateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminCreateCategorySerializer
+    queryset = Category.objects.all()
+    
+    #Required for image upload
+    parser_classes = [MultiPartParser,FormParser]
+    
+    
+class AdminUpdateCategoryAPIView(RetrieveUpdateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminCreateCategorySerializer
+    queryset = Category.objects.all()
+    parser_classes = [MultiPartParser,FormParser]
+    
