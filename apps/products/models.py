@@ -4,8 +4,14 @@ from django.utils import timezone
 
 class Category(models.Model):
     name = models.CharField(max_length=100,unique=True,db_index=True)
+    image = models.ImageField(upload_to='category/',null=True,blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
         return self.name
