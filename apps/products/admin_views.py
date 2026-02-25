@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 from rest_framework.filters import SearchFilter
-from django.db.models import Count
-from rest_framework.parsers import MultiPartParser, FormParser
+from django.db.models import Count, Q
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 class AdminProductListAPIView(ListAPIView):
@@ -132,11 +132,20 @@ class AdminCategoryListAPIView(ListAPIView):
     pagination_class = AdminCategoryPagination
     
     def get_queryset(self):
-        return (
+        
+        search = self.request.query_params.get('search','').strip()
+        qs = (
             Category.objects
             .annotate(product_count=Count('products',distinct=True))
             .order_by('-created_at')
         )
+        
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search)
+            )
+            
+        return qs
         
         
         
@@ -153,5 +162,5 @@ class AdminUpdateCategoryAPIView(RetrieveUpdateAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminCreateCategorySerializer
     queryset = Category.objects.all()
-    parser_classes = [MultiPartParser,FormParser]
+    parser_classes = [MultiPartParser,FormParser,JSONParser]
     
