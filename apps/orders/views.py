@@ -8,8 +8,8 @@ from decimal import Decimal
 from django.utils import timezone
 
 
-from .models import Customer, Order, OrderItem
-from apps.products.models import Product
+from .models import Customer, Order, OrderItem, Address
+from apps.products.models import Product, ProductVariant
 
 
 
@@ -23,32 +23,114 @@ class CreateOrderAPIView(APIView):
         data = request.data
 
         customer_data = data.get('customer')
+        address_data = data.get('address')
         items_data = data.get('items')
 
-        if not customer_data or not items_data:
+        if not customer_data or not items_data or not address_data:
             return Response(
-                { 'error': 'Customer and items are required' },
+                { 'error': 'Customer, address and items are required' },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Customer Handling
+        phone = customer_data.get('phone_no')
+        
+        if not phone:
+            return Response(
+                {"error": "Primary Phone no is required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+
         # Get or Create customer
-        customer, _ = Customer.objects.get_or_create(
-            phone_no = customer_data['phone_no'],
+        customer, created = Customer.objects.get_or_create(
+            phone_no = phone,
             defaults = {
                 'name': customer_data.get('name',''),
-                'email': customer_data.get('email')
+                'email': customer_data.get('email'),
+                'alternate_phone_no': customer_data.get('alternate_phone_no')
             }
         )
+        
+        
+        
+        # If existing customer -> update details
+        if not created:
+            customer.name = customer_data.get('name',customer.name)
+            customer.email = customer_data.get('email',customer.email)
+            customer.alternate_phone_no = customer_data.get(
+                'alternate_phone_no',
+                customer.alternate_phone_no
+            )
+            customer.save()
+            
+            
+            
+        # Create Address
+        address = Address.objects.create(
+            customer=customer,
+            street = address_data.get('street'),
+            city = address_data.get('city'),
+            pincode = address_data.get('pincode'),
+            landmark = address_data.get('landmark') 
+        )
 
+        # Fetch Varianst in Bulk (Optimized)
+        variant_ids = [item['variant_id'] for item in items_data]
+        
+        variants = ProductVariant.objects.filter(
+            id__in=variant_ids,
+            is_active=True
+        ).select_related('product')
+        
+        variants_map = { v.id: v for v in variants  }
+        
         subtotal = Decimal('0.00')
-
-        # Calculate subtotal
-        products_map = {}
+        order_items = []
+        
+        # Calculate total
         for item in items_data:
-            product = Product.objects.get(id=item['product_id'])
-            quantity = int(item['quantity'])
-            subtotal += product.price * quantity
-            products_map[item['product_id']] = product
+            product_id = item.get('product_id')
+            variant_id = item.get('variant_id')
+            quantity = int(item.get('quantity',1))
+            
+            variant = variants_map.get(variant_id)
+            
+            if not variant:
+                return Response(
+                    {'error': f'Variant {variant_id} not found or inactive'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            if variant.product_id != product_id:
+                return Response(
+                    {'error': f'Variant {variant_id} does not belong to Product {product_id}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            
+            # Using Offer Price
+            price = (
+                variant.offer_price
+                if variant.offer_price and variant.offer_price > 0
+                else variant.price
+            )
+            
+            line_total = price * quantity
+            subtotal += line_total
+            
+            order_items.append(
+                OrderItem(
+                    product=variant.product,
+                    variant=variant,
+                    variant_weight=variant.weight,
+                    product_name=variant.product.name,
+                    unit_price=price,
+                    quantity=quantity,
+                    total_price=line_total
+                )
+            )
 
 
         tax = Decimal('0.00') # tax may change
@@ -57,6 +139,7 @@ class CreateOrderAPIView(APIView):
         # Create order
         order = Order.objects.create(
             customer=customer,
+            shipping_address=address,
             order_status='pending', # later can be changed
             sub_total=subtotal,
             tax=tax,
@@ -67,24 +150,15 @@ class CreateOrderAPIView(APIView):
 
         # Generate order number
         order.order_number = f"ORD-{1000 + order.id}"
-        order.save()
+        order.save(update_fields=['order_number'])
 
+        # Attach order to items
+        for item in order_items:
+            item.order = order
+            
+        OrderItem.objects.bulk_create(order_items)
 
-        # Create order items
-        for item in items_data:
-            product = products_map[item['product_id']]
-            quantity = int(item['quantity'])
-
-
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                product_name=product.name,
-                unit_price=product.price,
-                quantity=quantity,
-                total_price=product.price * quantity
-            )
-
+       
         return Response(
             {
                 "message": "Order created successfully",
