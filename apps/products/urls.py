@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ProductListAPIView, HomeProductAPIView, CategoryListAPIView, ProductSearchSuggestionAPIView
 from .admin_views import AdminProductListAPIView, AdminProductCreateAPIView, AdminProductUpdateAPIView, AdminProductDeleteAPIView
 from .admin_views import AdminProductVariantCreateAPIView, AdminProductVariantUpdateAPIView, AdminProductVariantDeleteAPIView
-from .admin_views import AdminCategoryListAPIView, AdminCreatCategoryAPIView, AdminUpdateCategoryAPIView
+from .admin_views import AdminCategoryListAPIView, AdminCreatCategoryAPIView, AdminUpdateCategoryAPIView, AdminProductExportAPIView
 
 
 urlpatterns = [
@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin-categories/',AdminCategoryListAPIView.as_view(),name='admin-category'),
     path('create-category/',AdminCreatCategoryAPIView.as_view(),name='create-category'),
     path('update-category/<int:pk>/',AdminUpdateCategoryAPIView.as_view(),name='update-category'),
+    path('admin/products-export/',AdminProductExportAPIView.as_view(),name='product-export'),
 ]
