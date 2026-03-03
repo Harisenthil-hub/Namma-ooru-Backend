@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek, TruncHour
 from datetime import timedelta
 from .utils import get_date_range, normalize
+from .pagination import AdminDashboardRecentOrderPagination
 
 
 
@@ -320,11 +321,6 @@ class AdminRecentOrdersAnalyticsAPIView(APIView):
     
     def get(self,request):
         
-        cache_key = f"admin_recent_orders_last_7_days"
-        
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return Response(cached_data)
         
         now = timezone.now()
         last_7_days = now - timedelta(days=7)
@@ -338,9 +334,12 @@ class AdminRecentOrdersAnalyticsAPIView(APIView):
             .order_by('-created_at')
         )
         
+        # Pagination
+        paginator = AdminDashboardRecentOrderPagination()
+        page = paginator.paginate_queryset(recent_orders_qs,request)
         
         results=[]
-        for order in recent_orders_qs:
+        for order in page:
             results.append({
                 'order_number': order.order_number,
                 'customer_name': order.customer.name,
@@ -357,9 +356,8 @@ class AdminRecentOrdersAnalyticsAPIView(APIView):
             'to': str(now.date()),
             'recent_orders': results
         }
-        cache.set(cache_key,data,timeout=1)
-    
-        return Response(data,status=status.HTTP_200_OK)
+
+        return paginator.get_paginated_response(data)
         
         
         
