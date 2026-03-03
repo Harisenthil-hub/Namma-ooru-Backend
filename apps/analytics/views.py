@@ -8,8 +8,9 @@ from rest_framework import status
 from decimal import Decimal
 from apps.orders.models import Order, OrderItem
 from django.utils import timezone
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, TruncMonth, TruncWeek, TruncHour
 from datetime import timedelta
+from .utils import get_date_range, normalize
 
 
 
@@ -18,19 +19,22 @@ class AdminSummaryAnalyticsAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self,request):
-        cache_key = "admin_summary_analytics"
+        start_date, end_date, range_param = get_date_range(request)
+        cache_key = f"admin_summary_analytics_{range_param}"
         cached_data = cache.get(cache_key)
 
         # If Already cached data availabel
         if cached_data:
             return Response(cached_data,status=status.HTTP_200_OK)
-
-        last_30_days = timezone.now() - timedelta(days=30)
         
 
         # DB lookups for Analytics
-        
-        orders = Order.objects.filter(buy_now_clicked_at__gte=last_30_days)
+        if start_date:
+            orders = Order.objects.filter(
+                buy_now_clicked_at__range=(start_date,end_date)
+            )
+        else:
+            orders = Order.objects.all()
 
         # Return Total orders
         total_orders = orders.count()
@@ -56,7 +60,6 @@ class AdminSummaryAnalyticsAPIView(APIView):
             'total_orders': total_orders,
             'pending_order': pending_orders,
             'confirmed_orders': confirmed_orders,
-            'pending_orders': pending_orders,
             'conversion_rate': conversion_rate,
             'confirmed_value': confirmed_value,
             'pending_value': pending_value
@@ -121,39 +124,107 @@ class AdminChartAnalyticsAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self,request):
-        cache_key = 'admin_charts_analytics'
+        start_date, end_date, range_param = get_date_range(request)
+        cache_key = f'admin_charts_analytics_{range_param}'
         cached_data = cache.get(cache_key)
 
         if cached_data:
             return Response(cached_data,status=status.HTTP_200_OK)
+        
+        
+        # Base Query 
+        orders_base = Order.objects.all()
+        
+        if range_param != 'max' and start_date:
+            orders_base = orders_base.filter(
+                buy_now_clicked_at__range=(start_date,end_date)
+            )
+            
+        current_tz = timezone.get_current_timezone()
+        
+        date_list = []
+        
+        # Grouping Logic
+        
+        if range_param == 'today':
+            trunc_func = TruncHour
+            
+            local_now = timezone.localtime(end_date)
+            start_of_day = local_now.replace(
+                hour=0,minute=0,second=0,microsecond=0
+            )
+            
+            date_list = []
+            current = start_of_day
+            
+            while current <= local_now:
+                date_list.append(current)
+                current += timedelta(hours=1)
+                
+        elif range_param == 'max':
+            trunc_func = TruncMonth
+            
+            first_order = Order.objects.order_by('created_at').first()
+            if first_order:
+                start = first_order.created_at.date().replace(day=1)
+            else:
+                start = timezone.localdate().replace(day=1)
+                
+            end = timezone.localdate().replace(day=1)
+            
+            
+            while current <= end:
+                date_list.append(current)
+                # Moving 1 month forward
+                if current.month == 12:
+                    current = current.replace(year=current.year+1,month=1)
+                else:
+                    current = current.replace(month=current.month+1)
+                    
+        else:
+            total_days = (end_date.date() - start_date.date()).days
+            
+            if total_days <= 90:
+                trunc_func = TruncDate
+                step_days = 1
+            elif total_days <= 365:
+                trunc_func = TruncWeek
+                step_days = 7
+            else:
+                trunc_func = TruncMonth
+                step_days = 30
+                
+            current = start_date.date()
+            
+            while current <= end_date.date():
+                date_list.append(current)
+                current += timedelta(days=step_days)
+                    
+                
 
         # 1) Order Activity Trend (Intent vs Confirmed) 
-        today = timezone.localdate()
-        days = 30
-        date_list = [today - timedelta(days=i) for i in range(days)]
-        date_list.reverse()
-
-        current_tz = timezone.get_current_timezone()
-
         # Total Orders per day
+        
         total_orders_qs = (
-            Order.objects
-            .annotate(date=TruncDate('created_at', tzinfo=current_tz))
+            orders_base
+            .annotate(date=trunc_func('buy_now_clicked_at', tzinfo=current_tz))
             .values('date')
             .annotate(count=Count('id'))
         )
 
         # Confirmed Orders per day
         confirmed_qs = (
-            Order.objects
+            orders_base
             .filter(order_status='confirmed')
-            .annotate(date=TruncDate('created_at', tzinfo=current_tz))
+            .annotate(date=trunc_func('buy_now_clicked_at', tzinfo=current_tz))
             .values('date')
             .annotate(count=Count('id'))
         )
 
-        total_map = {item['date']: item['count'] for item in total_orders_qs if item['date']}
-        confirmed_map = {item['date']: item['count'] for item in confirmed_qs if item['date']}
+        total_map = {
+           normalize(item['date']): item['count'] for item in total_orders_qs
+        }
+        confirmed_map = {item['date']: item['count'] for item in confirmed_qs}
         order_activity_trend = {
             "labels": [str(d) for d in date_list],
             "total_orders": [total_map.get(d, 0) for d in date_list],
@@ -162,10 +233,8 @@ class AdminChartAnalyticsAPIView(APIView):
 
         # 2) Order Status Distribution
 
-        last_30_days = timezone.now() - timedelta(days=30)
-        status_distribution = ( Order.objects
-        .filter(created_at__gte=last_30_days)
-        .aggregate(
+        status_distribution = (orders_base
+            .aggregate(
             pending=Count('id',filter=Q(order_status='pending')),
             confirmed=Count('id',filter=Q(order_status='confirmed')),
             cancelled=Count('id',filter=Q(order_status='cancelled'))
@@ -173,15 +242,25 @@ class AdminChartAnalyticsAPIView(APIView):
         )
 
         # 3) Top Products by orders
-        top_products = (
+        order_item_base = (
             OrderItem.objects
-            .filter(order__order_status='confirmed',
-                    order__created_at__gte=last_30_days)
+            .filter(order__order_status='confirmed'
+            )
+        )
+        
+        if start_date:
+            order_item_base = order_item_base.filter(
+                order__created_at__range=(start_date,end_date)
+            )
+            
+
+        top_products = (
+            order_item_base
             .values('product_name')
             .annotate(orders=Count('id'))
             .order_by('-orders')[:10]
         )
-
+        
         top_products_by_confirmed_orders = [
             {
                 'product': item['product_name'],
@@ -190,24 +269,22 @@ class AdminChartAnalyticsAPIView(APIView):
             for item in top_products
         ]
 
+
         # 4) Top Selling Categories (Confirmed)
         top_categories_qs = (
-            OrderItem.objects
-            .filter(
-                order__order_status='confirmed',
-                order__created_at__gte=last_30_days
-            )
+            order_item_base
             .values('product__category__name')
             .annotate(
                 revenue=Sum('total_price'),
-                orders=Count('order', distinct=True)
+                orders=Count('order',distinct=True)
             )
             .order_by('-revenue')[:7]
         )
+        
         top_categories = []
         total_revenue = Decimal('0.00')
         total_orders = 0
-
+        
         for item in top_categories_qs:
             revenue = item['revenue'] or Decimal('0.00')
             orders = item['orders']
@@ -243,23 +320,22 @@ class AdminRecentOrdersAnalyticsAPIView(APIView):
     
     def get(self,request):
         
-        today_date = timezone.localdate()
-        cache_key = f"admin_recent_orders{today_date}"
+        cache_key = f"admin_recent_orders_last_7_days"
         
         cached_data = cache.get(cache_key)
         if cached_data:
             return Response(cached_data)
         
-        # Start and End time of the day
-        start_of_day=timezone.make_aware(timezone.datetime.combine(today_date,timezone.datetime.min.time()))
-        end_of_day=timezone.make_aware(timezone.datetime.combine(today_date,timezone.datetime.max.time()))
+        now = timezone.now()
+        last_7_days = now - timedelta(days=7)
+        
         
         recent_orders_qs = (
             Order.objects
-            .filter(created_at__range=(start_of_day,end_of_day))
+            .filter(created_at__gte=last_7_days)
             .select_related('customer')
             .annotate(items_count=Count('items'))
-            .order_by('-created_at')[:2]
+            .order_by('-created_at')
         )
         
         
@@ -277,7 +353,8 @@ class AdminRecentOrdersAnalyticsAPIView(APIView):
             
         
         data = {
-            'date': str(today_date),
+            'from': str(last_7_days.date()) ,
+            'to': str(now.date()),
             'recent_orders': results
         }
         cache.set(cache_key,data,timeout=1)
