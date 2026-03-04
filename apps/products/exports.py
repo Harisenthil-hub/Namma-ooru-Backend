@@ -30,7 +30,7 @@ def generate_product_export(products, request, variant_mode, include_summary):
     for product in products:
         if variant_mode == 'updated_only':
             variants = product.variants.filter(
-                update_at__date=product.updated_at.date()
+                updated_at__date=product.updated_at.date()
             )
         else:
             variants = product.variants.all()

@@ -8,7 +8,13 @@ class Customer(models.Model):
     email = models.EmailField(max_length=100,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    last_address = models.TextField(blank=True,null=True)
+    last_address = models.ForeignKey(
+        'Address',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='last_used_by'
+    )
 
     def __str__(self):
         return f"{self.name} - {self.phone_no}"
@@ -18,11 +24,12 @@ class Address(models.Model):
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
-        related_name='addresses'   
+        related_name='addresses',
+        db_index=True  
     )
-    street = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=100)
+    street = models.CharField(max_length=255,db_index=True)
+    city = models.CharField(max_length=100,db_index=True)
+    pincode = models.CharField(max_length=100,db_index=True)
     landmark = models.CharField(max_length=150,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     

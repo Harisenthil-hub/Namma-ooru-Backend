@@ -67,14 +67,32 @@ class CreateOrderAPIView(APIView):
             
             
             
-        # Create Address
-        address = Address.objects.create(
+        
+        # Create or get Address 
+        
+        street = address_data.get('street','').strip().lower()
+        city = address_data.get('city','').strip().lower()
+        pincode = address_data.get('pincode','').strip()
+        landmark = address_data.get('landmark','').strip().lower()
+        
+        
+        address = Address.objects.filter(
             customer=customer,
-            street = address_data.get('street'),
-            city = address_data.get('city'),
-            pincode = address_data.get('pincode'),
-            landmark = address_data.get('landmark') 
-        )
+            street = street,
+            city = city,
+            pincode = pincode,
+            landmark = landmark 
+        ).first()
+         
+         
+        if not address:
+            address = Address.objects.create(
+                customer=customer,
+                street = street,
+                city = city,
+                pincode = pincode,
+                landmark = landmark 
+            )
 
         # Fetch Varianst in Bulk (Optimized)
         variant_ids = [item['variant_id'] for item in items_data]
