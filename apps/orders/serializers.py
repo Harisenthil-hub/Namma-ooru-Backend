@@ -20,10 +20,30 @@ class AdminOrderListSerializer(serializers.ModelSerializer):
     pending_minutes = serializers.SerializerMethodField()
     items = AdminOrderItemSerializer(many=True,read_only=True)
     
-    street = serializers.CharField(source='shipping_address.street')
-    city = serializers.CharField(source='shipping_address.city')
-    pincode = serializers.CharField(source='shipping_address.pincode')
-    landmark = serializers.CharField(source='shipping_address.landmark')
+    street = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    pincode = serializers.SerializerMethodField()
+    landmark = serializers.SerializerMethodField()
+    
+    def get_street(self, obj):
+        if obj.shipping_address:
+            return obj.shipping_address.street
+        return None
+
+    def get_city(self, obj):
+        if obj.shipping_address:
+            return obj.shipping_address.city
+        return None
+
+    def get_pincode(self, obj):
+        if obj.shipping_address:
+            return obj.shipping_address.pincode
+        return None
+
+    def get_landmark(self, obj):
+        if obj.shipping_address:
+            return obj.shipping_address.landmark
+        return None
     
     class Meta:
         model = Order
