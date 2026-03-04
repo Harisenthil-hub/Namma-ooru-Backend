@@ -4,13 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from django.db.models import Q, Count, Sum, Max, Prefetch
+from django.db.models import Q, Count, Sum, Max, Prefetch, OuterRef, Subquery
 from django.core.cache import cache
 from datetime import timedelta
 from .pagination import AdminOrderPagination
 
 
-from .models import Order, Customer, OrderItem
+from .models import Order, Customer, OrderItem, Address
 from .serializers import AdminOrderListSerializer, AdminCustomerListSerializer
 
 
@@ -21,7 +21,10 @@ class AdminOrderListAPIView(ListAPIView):
 
     def get_queryset(self):
 
-        qs = Order.objects.select_related('customer').prefetch_related(
+        qs = Order.objects.select_related(
+            'customer',
+            'shipping_address'
+        ).prefetch_related(
             Prefetch(
                 'items',
                 queryset=OrderItem.objects.select_related('product').only(
@@ -33,7 +36,8 @@ class AdminOrderListAPIView(ListAPIView):
             )
         ).only(
             'order_number', 'order_status', 'total_amount', 'created_at',
-             'customer__name', 'customer__phone_no','shipping_address'
+             'customer__name', 'customer__phone_no','shipping_address__street','shipping_address__city','shipping_address__pincode',
+             'shipping_address__landmark'
         ).order_by('-created_at')
 
 
@@ -99,6 +103,10 @@ class AdminCustomerListAPIVies(ListAPIView):
     def get_queryset(self):
         search = self.request.query_params.get('search','').strip()
         print(search)
+        
+        latest_address = Address.objects.filter(
+            customer=OuterRef('pk')
+        ).order_by('-created_at')
        
         qs = (
             Customer.objects
@@ -106,16 +114,21 @@ class AdminCustomerListAPIVies(ListAPIView):
                 total_orders=Count('orders',distinct=True),
                 total_spent=Sum('orders__total_amount'),
                 last_order_at=Max('orders__created_at'),
+                
+                street = Subquery(latest_address.values('street')[:1]),
+                city = Subquery(latest_address.values('city')[:1]),
+                landmark = Subquery(latest_address.values('landmark')[:1]),
+                pincode = Subquery(latest_address.values('pincode')[:1]),
             )
             .order_by('-last_order_at')
         )
         
-       
 
         if search:
             qs = qs.filter(
                 Q(phone_no__icontains=search) |
-                Q(name__icontains=search)
+                Q(name__icontains=search) |
+                Q(addresses__city__icontains=search)
             )
             print(qs)
 

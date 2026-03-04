@@ -16,6 +16,7 @@ from django.utils.dateparse import parse_date
 from datetime import timedelta
 from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
+from django.utils.timezone import now
 
 
 class AdminProductListAPIView(ListAPIView):
@@ -197,8 +198,8 @@ class AdminProductExportAPIView(APIView):
             )
         elif start_date and end_date:
             products = products.filter(
-                updated_at__gte=parse_date(start_date),
-                updated_at__lte=parse_date(end_date)
+                updated_at__date__gte=parse_date(start_date),
+                updated_at__date__lte=parse_date(end_date)
             )
         elif quick_filter:
             today = now().date()

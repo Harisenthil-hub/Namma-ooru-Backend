@@ -75,7 +75,8 @@ class AdminCategorySerializer(serializers.ModelSerializer):
             'image',
             'is_active',
             'created_at',
-            'product_count'
+            'product_count',
+            'updated_at'
         ]
         
 class AdminCreateCategorySerializer(serializers.ModelSerializer):
