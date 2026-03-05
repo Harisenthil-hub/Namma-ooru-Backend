@@ -18,6 +18,11 @@ class Category(models.Model):
     
 
 class Product(models.Model):
+    
+    class Meta:
+        ordering = ['id']
+        
+
     name = models.CharField(max_length=100,db_index=True)
     image = models.ImageField(upload_to='products/')
     category = models.ForeignKey(
