@@ -8,7 +8,7 @@ from apps.orders.models import OrderItem
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
-from django.db.models import Count, Prefetch, Q, OuterRef, Exists
+from django.db.models import Count, Prefetch, Q, OuterRef, Exists, Case, When, IntegerField, Value, Exists
 from .pagination import UserProductPagination
 from rest_framework.filters import SearchFilter
 from django.core.cache import cache
@@ -144,6 +144,50 @@ class ProductSearchSuggestionAPIView(APIView):
         
         cache.set(cache_key,suggestions,timeout=10)
         return Response(suggestions,status=status.HTTP_200_OK)
+
+
+class DealsProductListAPIView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ProductSerializer
+    pagination_class = UserProductPagination
+    filter_backends = [SearchFilter]
+    search_fields = ['name','category__name']
+    
+    
+    def get_queryset(self):
         
+        offer_variants = ProductVariant.objects.filter(
+            product=OuterRef('pk'),
+            is_active=True,
+            offer_price__isnull=False
+        )
+        
+        queryset = Product.objects.filter(
+            is_active=True,
+            variants__is_active=True # ensuring active products
+        ).annotate(
+            has_offer=Exists(offer_variants)
+        ).prefetch_related(
+            Prefetch(
+                'variants',
+                queryset=ProductVariant.objects.filter(is_active=True)
+            )
+        ).order_by('-has_offer','-created_at').distinct() # offers first
+        
+        search = self.request.query_params.get('search')
+        category = self.request.query_params.get('category')
+        
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(category__name__icontains=search)
+            )
+            
+        if category:
+            queryset = queryset.filter(category_id=category)
+        
+        
+        
+        return queryset
         
        
