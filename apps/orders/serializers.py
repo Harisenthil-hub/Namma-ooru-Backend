@@ -10,13 +10,15 @@ class AdminOrderItemSerializer(serializers.ModelSerializer):
             'product_name',
             'unit_price',
             'quantity',
-            'total_price'
+            'total_price',
+            'variant_weight'
         ]
 
 
 class AdminOrderListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name")
     phone_no = serializers.CharField(source="customer.phone_no")
+    alternate_phone_no = serializers.CharField(source="customer.alternate_phone_no")
     pending_minutes = serializers.SerializerMethodField()
     items = AdminOrderItemSerializer(many=True,read_only=True)
     
@@ -52,6 +54,7 @@ class AdminOrderListSerializer(serializers.ModelSerializer):
             "order_status",
             "customer_name",
             "phone_no",
+            "alternate_phone_no",
             "total_amount",
             "created_at",
             "pending_minutes",

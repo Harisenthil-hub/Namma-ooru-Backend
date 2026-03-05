@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ProductListAPIView, HomeProductAPIView, CategoryListAPIView, ProductSearchSuggestionAPIView
+from .views import ProductListAPIView, HomeProductAPIView, CategoryListAPIView, ProductSearchSuggestionAPIView, DealsProductListAPIView
 from .admin_views import AdminProductListAPIView, AdminProductCreateAPIView, AdminProductUpdateAPIView, AdminProductDeleteAPIView
 from .admin_views import AdminProductVariantCreateAPIView, AdminProductVariantUpdateAPIView, AdminProductVariantDeleteAPIView
 from .admin_views import AdminCategoryListAPIView, AdminCreatCategoryAPIView, AdminUpdateCategoryAPIView, AdminProductExportAPIView
@@ -8,6 +8,7 @@ from .admin_views import AdminCategoryListAPIView, AdminCreatCategoryAPIView, Ad
 urlpatterns = [
     path('home/',HomeProductAPIView.as_view(),name='home-products'),
     path('list-products/',ProductListAPIView.as_view(),name='product-list'),
+    path('deals-products/',DealsProductListAPIView.as_view(),name='deals-list'),
     path('categories/',CategoryListAPIView.as_view(),name='category-list'),
     path('search-suggestions/',ProductSearchSuggestionAPIView.as_view(),name='product-search-suggestions'),
     path('admin-products/',AdminProductListAPIView.as_view(),name='admin-products-list'),

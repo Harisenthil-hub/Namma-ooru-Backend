@@ -1,6 +1,7 @@
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from django.utils.timezone import localtime
+from django.utils import timezone
 
 
 def generate_product_export(products, request, variant_mode, include_summary):
@@ -65,6 +66,11 @@ def generate_product_export(products, request, variant_mode, include_summary):
         summary_sheet.append(['Total Products', products.count()])
         summary_sheet.append(['Total Variants', sum(p.variants.count() for p in products)])
         summary_sheet.append(['Filters',str(request.GET.dict())])
+        
+    
+        summary_sheet.append([])
+        
+        summary_sheet.append(["Export Generated At", localtime(timezone.now()).strftime("%Y-%m-%d %H:%M")])
         
     return wb
         

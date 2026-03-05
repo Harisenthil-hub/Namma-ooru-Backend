@@ -8,6 +8,7 @@ from django.db.models import Q, Count, Sum, Max, Prefetch, OuterRef, Subquery
 from django.core.cache import cache
 from datetime import timedelta
 from .pagination import AdminOrderPagination
+from .utils import get_filtered_orders
 
 
 from .models import Order, Customer, OrderItem, Address
@@ -20,41 +21,8 @@ class AdminOrderListAPIView(ListAPIView):
     pagination_class = AdminOrderPagination
 
     def get_queryset(self):
-
-        qs = Order.objects.select_related(
-            'customer',
-            'shipping_address'
-        ).prefetch_related(
-            Prefetch(
-                'items',
-                queryset=OrderItem.objects.select_related('product').only(
-                    'order_id',
-                    'product_id',
-                    'quantity',
-                    'unit_price',
-                )
-            )
-        ).only(
-            'order_number', 'order_status', 'total_amount', 'created_at',
-             'customer__name', 'customer__phone_no','shipping_address__street','shipping_address__city','shipping_address__pincode',
-             'shipping_address__landmark'
-        ).order_by('-created_at')
-
-
-        status = self.request.query_params.get('status')
-        search = self.request.query_params.get('search')
-
-        if status:
-            qs = qs.filter(order_status=status)
-
-        if search:
-            qs = qs.filter(
-                Q(order_number__icontains=search) |
-                Q(customer__phone_no__icontains=search) |
-                Q(customer__name__icontains=search)
-            )
-
-        return qs
+        
+        return get_filtered_orders(self.request)
 
 
 class AdminOrderStatusUpdateAPIView(APIView):
@@ -95,7 +63,7 @@ class AdminOrderStatusUpdateAPIView(APIView):
         )
 
 
-class AdminCustomerListAPIVies(ListAPIView):
+class AdminCustomerListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminCustomerListSerializer
     pagination_class = AdminOrderPagination # same Pagination as Order list
