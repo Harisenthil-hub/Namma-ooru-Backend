@@ -28,7 +28,7 @@ def generate_product_export(products, request, variant_mode, include_summary):
     for cell in ws[1]:
         cell.font = Font(bold=True)
     
-    for product in products:
+    for product in products.iterator(chunk_size=200):
         if variant_mode == 'updated_only':
             variants = product.variants.filter(
                 updated_at__date=product.updated_at.date()
