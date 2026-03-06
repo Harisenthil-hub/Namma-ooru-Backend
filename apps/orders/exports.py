@@ -1,7 +1,7 @@
 from openpyxl import Workbook
 from django.http import HttpResponse
 from rest_framework.views import APIView
-from .utils import get_filtered_orders
+from .utils import get_filtered_orders, get_admin_customer_queryset
 from rest_framework.permissions import IsAdminUser
 from openpyxl.styles import Font
 from django.db.models import Sum, OuterRef, Count, Q, Max, Subquery
@@ -172,116 +172,116 @@ class AdminCustomerExportAPIView(APIView):
     permission_classes = [IsAdminUser]
     
     
-    def get_queryset(self,request):
+    # def get_queryset(self,request):
         
         
-        search = request.GET.get('search','').strip()
-        customer_type = request.GET.get('customer_type')
-        min_orders = request.GET.get('min_orders')
-        min_spent = request.GET.get('min_spent')
-        date = request.GET.get('date')
-        start_date = request.GET.get('start_date')
-        quick = request.query_params.get('quick')
-        end_date = request.GET.get('end_date')
+    #     search = request.GET.get('search','').strip()
+    #     customer_type = request.GET.get('customer_type')
+    #     min_orders = request.GET.get('min_orders')
+    #     min_spent = request.GET.get('min_spent')
+    #     date = request.GET.get('date')
+    #     start_date = request.GET.get('start_date')
+    #     quick = request.query_params.get('quick')
+    #     end_date = request.GET.get('end_date')
         
-        latest_address = Address.objects.filter(
-            customer=OuterRef('pk')
-        ).order_by('-created_at')
+    #     latest_address = Address.objects.filter(
+    #         customer=OuterRef('pk')
+    #     ).order_by('-created_at')
         
-        qs = (
-            Customer.objects
-            .annotate(
-                total_orders=Count('orders',distinct=True),
+    #     qs = (
+    #         Customer.objects
+    #         .annotate(
+    #             total_orders=Count('orders',distinct=True),
                 
-                pending_orders=Count(
-                    'orders',
-                    filter=Q(orders__order_status='pending')
-                ),
+    #             pending_orders=Count(
+    #                 'orders',
+    #                 filter=Q(orders__order_status='pending')
+    #             ),
                 
-                confirmed_orders=Count(
-                    'orders',
-                    filter=Q(orders__order_status='confirmed')
-                ),
+    #             confirmed_orders=Count(
+    #                 'orders',
+    #                 filter=Q(orders__order_status='confirmed')
+    #             ),
                 
-                cancelled_orders=Count(
-                    'orders',
-                    filter=Q(orders__order_status='cancelled')
-                ),
+    #             cancelled_orders=Count(
+    #                 'orders',
+    #                 filter=Q(orders__order_status='cancelled')
+    #             ),
                 
-                confirmed_spent=Sum(
-                    'orders__total_amount',
-                    filter=Q(orders__order_status='confirmed')
-                ),
+    #             confirmed_spent=Sum(
+    #                 'orders__total_amount',
+    #                 filter=Q(orders__order_status='confirmed')
+    #             ),
                 
-                last_order_at=Max('orders__created_at'),
+    #             last_order_at=Max('orders__created_at'),
                 
-                street=Subquery(
-                    latest_address.values('street')[:1]
-                ),
+    #             street=Subquery(
+    #                 latest_address.values('street')[:1]
+    #             ),
                 
-                city=Subquery(
-                    latest_address.values('city')[:1]
-                ),
+    #             city=Subquery(
+    #                 latest_address.values('city')[:1]
+    #             ),
                 
-                landmark=Subquery(
-                    latest_address.values('landmark')[:1]
-                ),
+    #             landmark=Subquery(
+    #                 latest_address.values('landmark')[:1]
+    #             ),
                 
-                pincode=Subquery(
-                    latest_address.values('pincode')[:1]
-                ),   
-            ).order_by('-last_order_at')
-        )
+    #             pincode=Subquery(
+    #                 latest_address.values('pincode')[:1]
+    #             ),   
+    #         ).order_by('-last_order_at')
+    #     )
         
         
-        if search:
-           qs = qs.filter(
-               Q(phone_no__icontains=search) |
-               Q(name__icontains=search)
-           )
+    #     if search:
+    #        qs = qs.filter(
+    #            Q(phone_no__icontains=search) |
+    #            Q(name__icontains=search)
+    #        )
            
         
-        if date:
-            qs = qs.filter(
-                last_ordet_at__date=date
-            )
+    #     if date:
+    #         qs = qs.filter(
+    #             last_ordet_at__date=date
+    #         )
             
-        if start_date and end_date:
-            qs = qs.filter(last_order_at__range=[start_date,end_date])
+    #     if start_date and end_date:
+    #         qs = qs.filter(last_order_at__range=[start_date,end_date])
             
         
-        if quick:
-            now = timezone.now()
+    #     if quick:
+    #         now = timezone.now()
             
-            if quick == 'today':
-                qs = qs.filter(last_order_at__date=now.date())
+    #         if quick == 'today':
+    #             qs = qs.filter(last_order_at__date=now.date())
                 
-            elif quick == 'yesterday':
-                qs = qs.filter(last_order_at__date=(now - timedelta(day=1)).date())
+    #         elif quick == 'yesterday':
+    #             qs = qs.filter(last_order_at__date=(now - timedelta(day=1)).date())
                 
-            elif quick == 'last7days':
-                qs = qs.filter(last_order_at__gte=now - timedelta(days=7))
+    #         elif quick == 'last7days':
+    #             qs = qs.filter(last_order_at__gte=now - timedelta(days=7))
                 
-            elif quick == 'last30days':
-                qs = qs.filter(last_order_at__gte=now - timedelta(days=30))
+    #         elif quick == 'last30days':
+    #             qs = qs.filter(last_order_at__gte=now - timedelta(days=30))
                 
                 
-        if min_orders:
-            qs = qs.filter(
-                total_orders__gte=min_orders
-            )
+    #     if min_orders:
+    #         qs = qs.filter(
+    #             total_orders__gte=min_orders
+    #         )
             
-        if min_spent:
-            qs = qs.filter(
-                confirmed_spent__gte=min_spent
-            )
+    #     if min_spent:
+    #         qs = qs.filter(
+    #             confirmed_spent__gte=min_spent
+    #         )
             
             
-        return qs
+    #     return qs
         
     def get(self,request):
         
-        customers = self.get_queryset(request)
+        customers = get_admin_customer_queryset(request)
         include_summary = request.GET.get('summary')
     
         wb = Workbook()
@@ -292,7 +292,7 @@ class AdminCustomerExportAPIView(APIView):
         headers = [
             'Customer Name',
             'Phone',
-            'Alternate Phone'
+            'Alternate Phone',
             'Street',
             'City',
             'Landmark',
@@ -301,7 +301,7 @@ class AdminCustomerExportAPIView(APIView):
             'Confirmed Orders',
             'Pending Orders',
             'Cancelled Orders',
-            'Confirmed Revenue'
+            'Confirmed Revenue',
             'Avg Order Value',
             'Confirmation Rate %',
             'Cancellation Rate %',
@@ -354,8 +354,8 @@ class AdminCustomerExportAPIView(APIView):
                 customer.landmark,
                 customer.pincode,
                 total_orders,
-                pending,
                 confirmed,
+                pending,
                 cancelled,
                 Decimal(str(revenue)),
                 Decimal(str(avg_value)),
@@ -405,7 +405,9 @@ class AdminCustomerExportAPIView(APIView):
         summary.append(['Overall Cancellation Rate %',round(overall_cancel_rate,2)])
         summary.append(['Overall Confirmation Rate %',round(overall_confirm_rate,2)])
         
+        summary.append([])
         
+        summary.append(["Export Generated At", localtime(timezone.now()).strftime("%Y-%m-%d %H:%M")])
         
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

@@ -72,7 +72,13 @@ class AdminOrderListSerializer(serializers.ModelSerializer):
 
 class AdminCustomerListSerializer(serializers.ModelSerializer):
     total_orders = serializers.IntegerField()
-    total_spent = serializers.DecimalField(max_digits=10, decimal_places=2)
+    
+    confirmed_orders = serializers.IntegerField()
+    pending_orders = serializers.IntegerField()
+    cancelled_orders = serializers.IntegerField()
+    
+    confirmed_spent = serializers.DecimalField(max_digits=10, decimal_places=2)
+   
     last_order_at = serializers.DateTimeField()
     
     street = serializers.CharField(read_only=True)
@@ -86,9 +92,14 @@ class AdminCustomerListSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'phone_no',
+            'alternate_phone_no',
             'email',
+            
             'total_orders',
-            'total_spent',
+            'confirmed_orders',
+            'cancelled_orders',
+            'pending_orders',
+            'confirmed_spent',
             'street',
             'city',
             'landmark',
