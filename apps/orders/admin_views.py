@@ -8,7 +8,7 @@ from django.db.models import Q, Count, Sum, Max, Prefetch, OuterRef, Subquery
 from django.core.cache import cache
 from datetime import timedelta
 from .pagination import AdminOrderPagination
-from .utils import get_filtered_orders
+from .utils import get_filtered_orders, get_admin_customer_queryset
 
 
 from .models import Order, Customer, OrderItem, Address
@@ -69,38 +69,44 @@ class AdminCustomerListAPIView(ListAPIView):
     pagination_class = AdminOrderPagination # same Pagination as Order list
 
     def get_queryset(self):
-        search = self.request.query_params.get('search','').strip()
-        print(search)
         
-        latest_address = Address.objects.filter(
-            customer=OuterRef('pk')
-        ).order_by('-created_at')
+        return get_admin_customer_queryset(self.request)
+        
+        '''
+            search = self.request.query_params.get('search','').strip()
+            print(search)
+            
+            latest_address = Address.objects.filter(
+                customer=OuterRef('pk')
+            ).order_by('-created_at')
+            
+            qs = (
+                Customer.objects
+                .annotate(
+                    total_orders=Count('orders',distinct=True),
+                    total_spent=Sum('orders__total_amount'),
+                    last_order_at=Max('orders__created_at'),
+                    
+                    street = Subquery(latest_address.values('street')[:1]),
+                    city = Subquery(latest_address.values('city')[:1]),
+                    landmark = Subquery(latest_address.values('landmark')[:1]),
+                    pincode = Subquery(latest_address.values('pincode')[:1]),
+                )
+                .order_by('-last_order_at')
+            )
+            
+
+            if search:
+                qs = qs.filter(
+                    Q(phone_no__icontains=search) |
+                    Q(name__icontains=search) |
+                    Q(addresses__city__icontains=search)
+                )
+                print(qs)
+
+            return qs  
+        '''
+        
        
-        qs = (
-            Customer.objects
-            .annotate(
-                total_orders=Count('orders',distinct=True),
-                total_spent=Sum('orders__total_amount'),
-                last_order_at=Max('orders__created_at'),
-                
-                street = Subquery(latest_address.values('street')[:1]),
-                city = Subquery(latest_address.values('city')[:1]),
-                landmark = Subquery(latest_address.values('landmark')[:1]),
-                pincode = Subquery(latest_address.values('pincode')[:1]),
-            )
-            .order_by('-last_order_at')
-        )
-        
-
-        if search:
-            qs = qs.filter(
-                Q(phone_no__icontains=search) |
-                Q(name__icontains=search) |
-                Q(addresses__city__icontains=search)
-            )
-            print(qs)
-
-        return qs
-
 
         
