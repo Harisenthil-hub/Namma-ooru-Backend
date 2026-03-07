@@ -48,7 +48,7 @@ class ProductListAPIView(ListAPIView):
     
 
 class HomeProductAPIView(APIView):
-
+    permission_classes = [AllowAny]
     def get(self,request):
 
         cache_key = 'home_products'
@@ -113,6 +113,7 @@ class HomeProductAPIView(APIView):
 
 
 class CategoryListAPIView(ListAPIView):
+    permission_classes = [AllowAny]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 

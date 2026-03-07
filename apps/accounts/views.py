@@ -6,12 +6,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from .throttle import LoginThrottle
 
 # Create your views here.
 
 class AdminLoginAPIView(APIView):
     permission_classes=[AllowAny]
     authentication_classes = []
+    throttle_classes = [LoginThrottle]
 
     def post(self,request):
         username=request.data.get("username")
@@ -74,6 +76,7 @@ class AdminRefreshAPIView(APIView):
 
 
 class AdminCheckAPIView(APIView):
+    permission_classes = [AllowAny]
     def get(self,request):
         return Response({
             'is_admin': request.user.is_staff
