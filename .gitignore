@@ -1,2 +1,5 @@
 .env
 /media
+
+staticfiles/
+static_root/
