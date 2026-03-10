@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env( str(BASE_DIR/".env") )
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = "/var/www/nammaooru/media"
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 # Quick-start development settings - unsuitable for production
@@ -253,6 +253,9 @@ LOGGING = {
 
 
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
