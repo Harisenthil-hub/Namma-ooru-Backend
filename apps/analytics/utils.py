@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime
 from django.utils import timezone
+from apps.orders.models import Order
 
 
 def get_date_range(request):
@@ -21,7 +22,8 @@ def get_date_range(request):
     elif (range_param == '5year'):
         start_date = now - timedelta(days=365*5)
     elif (range_param == 'max'):
-        start_date = None 
+        first_order = Order.objects.earliest('created_at')
+        start_date = first_order.created_at
     else:
         start_date = now - timedelta(days=30)
         
