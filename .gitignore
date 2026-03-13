@@ -3,3 +3,8 @@
 
 staticfiles/
 static_root/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo

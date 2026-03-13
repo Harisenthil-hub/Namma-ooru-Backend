@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env( str(BASE_DIR/".env") )
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = '/home/genkit/htdocs/nammaooru/media'
 
 
 # Quick-start development settings - unsuitable for production
