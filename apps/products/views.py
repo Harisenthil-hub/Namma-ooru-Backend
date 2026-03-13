@@ -73,7 +73,16 @@ class HomeProductAPIView(APIView):
             return Response(cached_data)
 
         # Take only Products are active (Base query)
-        base_qs = Product.objects.filter(is_active=True)
+        base_qs = Product.objects.filter(
+            is_active=True,
+            category__is_active=True,
+            variants__is_active=True
+        ).prefetch_related(
+            Prefetch(
+                "variants",
+                queryset=ProductVariant.objects.filter(is_active=True)
+            )
+        ).distinct()
         
         # Check if a Product has an active variant (Sub query)
         offer_variant_subquery = ProductVariant.objects.filter(
@@ -85,9 +94,9 @@ class HomeProductAPIView(APIView):
         # Getting Top selling Product Ids (Step 1)
         top_ids = list(
             OrderItem.objects
-            .filter(order__order_status='confirmed')
+            .filter(order__order_status='confirmed',product__is_active=True)
             .values('product_id')
-            .annotate(total_orders=Count('id'))
+            .annotate(total_orders=Count('product_id'))
             .order_by('-total_orders')
             .values_list('product_id',flat=True)[:5]
         )
@@ -95,7 +104,7 @@ class HomeProductAPIView(APIView):
         # Fetching Top Products (Step 2)
         products = list(base_qs.filter(id__in=top_ids))
         
-
+        existing_ids = {p.id for p in products}
         # Fallback --> Offer Products (Step 3)
         if len(products) < 5:
             remaining = 5 - len(products)
@@ -103,11 +112,11 @@ class HomeProductAPIView(APIView):
                 base_qs
                 .annotate(has_offer=Exists(offer_variant_subquery))
                 .filter(has_offer=True)
-                .exclude(id__in=[p.id for p in products])
+                .exclude(id__in=existing_ids)
                 .order_by('-created_at')[:remaining]
             )
             products.extend(list(offer_products))
-
+            existing_ids.update(p.id for p in offer_products)
 
 
         # Fallback --> Latest Products (Step 4)
@@ -115,7 +124,7 @@ class HomeProductAPIView(APIView):
             remaining = 5 - len(products)
             latest_products = (
                 base_qs
-                .exclude(id__in=[p.id for p in products])
+                .exclude(id__in=existing_ids)
                 .order_by('-created_at')[:remaining]
             )
             products.extend(list(latest_products))

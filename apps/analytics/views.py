@@ -48,7 +48,7 @@ class AdminSummaryAnalyticsAPIView(APIView):
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
         # Return Pending orders Value
-        pending_value = orders.filter(order_status='pending').aggregate(
+        cancelled_value = orders.filter(order_status='cancelled').aggregate(
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
 
@@ -63,7 +63,7 @@ class AdminSummaryAnalyticsAPIView(APIView):
             'confirmed_orders': confirmed_orders,
             'conversion_rate': conversion_rate,
             'confirmed_value': confirmed_value,
-            'pending_value': pending_value
+            'cancelled_value': cancelled_value
         }
 
         cache.set(cache_key,data, timeout=60)
