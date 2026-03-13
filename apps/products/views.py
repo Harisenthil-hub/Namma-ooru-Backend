@@ -12,6 +12,8 @@ from django.db.models import Count, Prefetch, Q, OuterRef, Exists, Case, When, I
 from .pagination import UserProductPagination
 from rest_framework.filters import SearchFilter
 from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 # Create your views here.
 
 # This is for Product listing page
@@ -24,15 +26,27 @@ class ProductListAPIView(ListAPIView):
     # queryset = Product.objects.filter(is_active=True)
     
     def get_queryset(self):
-        queryset =  Product.objects.filter(is_active=True).prefetch_related(
+        
+        search = self.request.query_params.get('search')
+        category = self.request.query_params.get('category')
+        
+        
+        cache_key = f'products_{search or 'all'}_{category or 'all'}'
+        cached_queryset = cache.get(cache_key)
+        if cached_queryset:
+            return cached_queryset
+        queryset =  Product.objects.filter(
+            is_active=True,
+            category__is_active=True,
+            variants__is_active=True
+            ).select_related('category').prefetch_related(
             Prefetch(
                 'variants',
                 queryset = ProductVariant.objects.filter(is_active=True)
             )
-        )
+        ).distinct()
         
-        search = self.request.query_params.get('search')
-        category = self.request.query_params.get('category')
+        
         
         if search:
             queryset = queryset.filter(
@@ -43,7 +57,8 @@ class ProductListAPIView(ListAPIView):
         if category:
             queryset = queryset.filter(category_id=category)
             
-            
+        cache.set(cache_key, queryset, timeout=60*5)  # 5 minutes
+        
         return (queryset)
     
 
@@ -107,15 +122,28 @@ class HomeProductAPIView(APIView):
 
 
         data = ProductSerializer(products, many=True,context={ 'request':request }).data
-        cache.set(cache_key, data, timeout=10)
+        cache.set(cache_key, data, timeout=(60*5))
 
         return Response(data, status=status.HTTP_200_OK)
 
 
 class CategoryListAPIView(ListAPIView):
     permission_classes = [AllowAny]
-    queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = "category_list"
+
+        data = cache.get(cache_key)
+        if data:
+            return Response(data)
+
+        queryset = Category.objects.filter(is_active=True)
+        serializer = self.get_serializer(queryset, many=True)
+
+        cache.set(cache_key, serializer.data, timeout=3600)
+
+        return Response(serializer.data)
 
 
 class ProductSearchSuggestionAPIView(APIView):
@@ -138,12 +166,12 @@ class ProductSearchSuggestionAPIView(APIView):
         
         suggestions = list(
             Product.objects
-            .filter(name__icontains=keyword,is_active=True)
+            .filter(name__icontains=keyword,is_active=True,category__is_active=True)
             .values_list('name',flat=True)
             .distinct()[:10]
         )
         
-        cache.set(cache_key,suggestions,timeout=10)
+        cache.set(cache_key,suggestions,timeout=60*5)
         return Response(suggestions,status=status.HTTP_200_OK)
 
 
@@ -156,6 +184,15 @@ class DealsProductListAPIView(ListAPIView):
     
     
     def get_queryset(self):
+        
+        search = self.request.query_params.get('search')
+        category = self.request.query_params.get('category')
+        
+        
+        cache_key = f'products_deals_{search}_{category}'
+        cached_queryset = cache.get(cache_key)
+        if cached_queryset:
+            return cached_queryset
         
         offer_variants = ProductVariant.objects.filter(
             product=OuterRef('pk'),
@@ -187,7 +224,7 @@ class DealsProductListAPIView(ListAPIView):
         if category:
             queryset = queryset.filter(category_id=category)
         
-        
+        cache.set(cache_key, queryset, timeout=60*5)  # 5 minutes
         
         return queryset
         

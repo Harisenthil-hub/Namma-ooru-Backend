@@ -2,6 +2,9 @@ from rest_framework import serializers
 from .models import Product, Category, ProductVariant
 from django.db import transaction
 import json
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,6 +25,10 @@ class ProductSerializer(serializers.ModelSerializer):
     #     if obj.image:
     #         return request.build_absolute_uri(obj.image.url)
     #     return None
+    
+    @method_decorator(cache_page(60 * 5))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
 
 class AdminProductCreateSerializer(serializers.ModelSerializer):

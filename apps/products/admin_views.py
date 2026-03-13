@@ -2,7 +2,7 @@ from rest_framework.generics import ListAPIView, CreateAPIView , RetrieveUpdateA
 from rest_framework.permissions import IsAdminUser
 from .models import Product, ProductVariant, Category
 from .serializers import ProductSerializer, ProductVariantSerializer, AdminProductCreateSerializer, AdminCategorySerializer
-from .serializers import AdminCreateCategorySerializer
+from .serializers import AdminCreateCategorySerializer, CategorySerializer
 from .pagination import AdminProductPagination, AdminCategoryPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -222,4 +222,8 @@ class AdminProductExportAPIView(APIView):
         
         wb.save(response)
         return response
-        
+  
+class AdminCategoryListProductPageAPIView(ListAPIView):
+    permission_classes = [IsAdminUser]
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer      

@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env( str(BASE_DIR/".env") )
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/home/genkit/htdocs/nammaooru/media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 # Quick-start development settings - unsuitable for production
@@ -52,12 +52,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.products',
+    # 'apps.products',
     'apps.accounts',
     'apps.orders',
     'apps.analytics',
     'corsheaders',
     # 'django_celery_beat',
+    'apps.products.apps.ProductsConfig',
 ]
 
 MIDDLEWARE = [
@@ -187,8 +188,11 @@ SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379/1',
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     }
 }
 
