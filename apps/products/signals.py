@@ -12,6 +12,7 @@ def clear_category_cache(sender, **kwargs):
     cache.delete("category_list")
     cache.delete_pattern("products_*")
     cache.delete_pattern("search_suggestions_*")
+    cache.delete_pattern("home_products")
     
 
 
@@ -21,3 +22,4 @@ def clear_category_cache(sender, **kwargs):
 def clear_product_cache(sender, **kwargs):
     print('dfdfdf')
     cache.delete_pattern("products_*")
+    cache.delete_pattern("home_products")
