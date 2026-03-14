@@ -32,6 +32,7 @@ class Product(models.Model):
         related_name='products'
     )
     is_active = models.BooleanField(default=True)
+    is_deals = models.BooleanField(default=False,db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True,db_index=True)
 
@@ -40,7 +41,7 @@ class Product(models.Model):
             old = Product.objects.get(id=self.id)
             if old.image and old.image != self.image:
                 old.image.delete(save=False)
-        except:
+        except Product.DoesNotExist:
             pass
         super().save(*args, **kwargs)
 
