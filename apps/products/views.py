@@ -203,26 +203,42 @@ class DealsProductListAPIView(ListAPIView):
         if cached_queryset:
             return cached_queryset
         
-        offer_variants = ProductVariant.objects.filter(
-            product=OuterRef('pk'),
-            is_active=True,
-            offer_price__isnull=False
-        )
+        # offer_variants = ProductVariant.objects.filter(
+        #     product=OuterRef('pk'),
+        #     is_active=True,
+        #     offer_price__isnull=False
+        # )
         
-        queryset = Product.objects.filter(
-            is_active=True,
-            variants__is_active=True # ensuring active products
-        ).annotate(
-            has_offer=Exists(offer_variants)
-        ).prefetch_related(
-            Prefetch(
-                'variants',
-                queryset=ProductVariant.objects.filter(is_active=True)
+        # queryset = Product.objects.filter(
+        #     is_active=True,
+        #     variants__is_active=True # ensuring active products
+        # ).annotate(
+        #     has_offer=Exists(offer_variants)
+        # ).prefetch_related(
+        #     Prefetch(
+        #         'variants',
+        #         queryset=ProductVariant.objects.filter(is_active=True)
+        #     )
+        # ).order_by('-has_offer','-created_at').distinct() # offers first
+        
+        
+        queryset = (
+            Product.objects.filter(
+                is_active=True,
+                is_deals=True,
+                category__is_active=True,
+                variants__is_active=True
             )
-        ).order_by('-has_offer','-created_at').distinct() # offers first
-        
-        search = self.request.query_params.get('search')
-        category = self.request.query_params.get('category')
+            .select_related('category')
+            .prefetch_related(
+                Prefetch(
+                    'variants',
+                    queryset=ProductVariant.objects.filter(is_active=True)
+                )
+            )
+            .order_by('-created_at')
+            .distinct()
+        )
         
         if search:
             queryset = queryset.filter(
