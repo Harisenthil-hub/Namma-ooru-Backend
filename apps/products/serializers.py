@@ -55,11 +55,15 @@ class AdminProductCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             product = Product.objects.create(**validated_data)
             
-            variant_objects = [
-                ProductVariant(product=product,**variant)
-                for variant in variants_data
-            ]
-            
+            variant_objects = []
+            for variant in variants_data:
+                for key, value in variant.items():
+                    if value == '':
+                        variant[key] = None
+                
+                variant_objects.append(
+                    ProductVariant(product=product,**variant)
+                )
             ProductVariant.objects.bulk_create(variant_objects)
             
         return product
@@ -68,7 +72,7 @@ class AdminProductCreateSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id','name','image']
+        fields = ['id','name','image','updated_at']
         
 
 class AdminCategorySerializer(serializers.ModelSerializer):

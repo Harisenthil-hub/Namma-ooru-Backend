@@ -8,12 +8,15 @@ from apps.orders.models import OrderItem
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
-from django.db.models import Count, Prefetch, Q, OuterRef, Exists, Case, When, IntegerField, Value, Exists
+from django.db.models import Count, Prefetch, Q, OuterRef, Exists, Case, When, IntegerField, Value, Exists, Sum
 from .pagination import UserProductPagination
 from rest_framework.filters import SearchFilter
 from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models.functions import Coalesce
 # Create your views here.
 
 # This is for Product listing page
@@ -56,6 +59,21 @@ class ProductListAPIView(ListAPIView):
             
         if category:
             queryset = queryset.filter(category_id=category)
+            
+        if not search and not category:
+            last_7_days = timezone.now() - timedelta(days=30)
+            
+            queryset = queryset.annotate(
+                recent_sales=Coalesce(
+                    Sum(
+                        'variants__order_items',
+                        filter=Q(variants__order_items__order__created_at__gte=last_7_days)
+                    ),
+                    0
+                ),
+                total_sales=Coalesce(Sum('variants__order_items'),0)
+            ).order_by('-recent_sales','-total_sales')
+            
             
         cache.set(cache_key, queryset, timeout=60*5)  # 5 minutes
         
@@ -147,7 +165,7 @@ class CategoryListAPIView(ListAPIView):
         if data:
             return Response(data)
 
-        queryset = Category.objects.filter(is_active=True)
+        queryset = Category.objects.filter(is_active=True).order_by('-updated_at')
         serializer = self.get_serializer(queryset, many=True)
 
         cache.set(cache_key, serializer.data, timeout=3600)

@@ -91,7 +91,7 @@ class OrderItem(models.Model):
         on_delete=models.PROTECT
     )
     
-    variant = models.ForeignKey('products.ProductVariant',on_delete=models.PROTECT,blank=True,null=True)
+    variant = models.ForeignKey('products.ProductVariant',on_delete=models.PROTECT,blank=True,null=True,related_name='order_items')  # maybe its redudant
     variant_weight = models.CharField(max_length=50,blank=True,null=True)
 
     product_name = models.CharField(max_length=200)
