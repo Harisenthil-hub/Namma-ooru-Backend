@@ -37,6 +37,10 @@ class AdminProductListAPIView(ListAPIView):
         if category_id:
             queryset = queryset.filter(category_id=category_id)
             
+        is_active = self.request.query_params.get('is_active')
+
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
         
         return queryset
    
@@ -184,11 +188,15 @@ class AdminProductExportAPIView(APIView):
         quick_filter = request.GET.get('filter')
         variant_mode = request.GET.get('variant_mode','all')
         include_summary = request.GET.get('include_summary','false').lower() == 'true'
+        is_active = request.GET.get('is_active')
+
         
         products = Product.objects.select_related(
             'category',
         ).prefetch_related('variants')
         
+        if is_active is not None:
+            products = products.filter(is_active=is_active.lower() == 'true')
        
         if filter_type:
             variant_mode = 'all'
