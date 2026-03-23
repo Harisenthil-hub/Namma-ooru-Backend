@@ -40,17 +40,17 @@ def generate_product_export(products, request, variant_mode, include_summary):
         if variants.exists():
             for variant in variants:
                 ws.append([
-                    product.id,
-                    product.name,
+                    product.id or '',
+                    product.name or '',
                     product.category.name if product.category else "",
                     product.is_active,
                     product.is_deals,
-                    localtime(product.updated_at).strftime('%Y-%m-%d %H:%M'),
-                    variant.weight,
-                    variant.price,
+                    localtime(product.updated_at).strftime('%Y-%m-%d %H:%M') or '',
+                    variant.weight or '',
+                    variant.price or '',
                     variant.offer_price or '',
-                    variant.is_active,
-                    localtime(variant.updated_at).strftime('%y-%m-%d %H:%M'),
+                    variant.is_active ,
+                    localtime(variant.updated_at).strftime('%y-%m-%d %H:%M') or '',
                 ])
         else:
             ws.append([
