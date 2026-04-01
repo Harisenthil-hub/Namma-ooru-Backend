@@ -72,7 +72,7 @@ class AdminProductCreateSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id','name','image','updated_at']
+        fields = ['id','name','image','updated_at','order']
         
 
 class AdminCategorySerializer(serializers.ModelSerializer):
@@ -87,13 +87,14 @@ class AdminCategorySerializer(serializers.ModelSerializer):
             'is_active',
             'created_at',
             'product_count',
-            'updated_at'
+            'updated_at',
+            'order',
         ]
         
 class AdminCreateCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['name','image','is_active']
+        fields = ['name','image','is_active','order']
         
     def validate_name(self,value):
         category_id = self.instance.id if self.instance else None

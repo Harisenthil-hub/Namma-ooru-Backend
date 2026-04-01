@@ -43,7 +43,7 @@ def generate_product_export(products, request, variant_mode, include_summary):
                     product.id or '',
                     product.name or '',
                     product.category.name if product.category else "",
-                    product.is_active,
+                    product.is_active ,
                     product.is_deals,
                     localtime(product.updated_at).strftime('%Y-%m-%d %H:%M') or '',
                     variant.weight or '',
@@ -58,6 +58,7 @@ def generate_product_export(products, request, variant_mode, include_summary):
                     product.name,
                     product.category.name if product.category else "",
                     product.is_active,
+                    product.is_deals,
                     localtime(product.updated_at).strftime('%Y-%m-%d %H:%M'),
                     "" , "", "", "", ""
             ])

@@ -41,6 +41,10 @@ class AdminProductListAPIView(ListAPIView):
 
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
+            
+        is_deals = self.request.query_params.get('is_deals')
+        if is_deals is not None:
+            queryset = queryset.filter(is_deals=is_deals.lower() == 'true')
         
         return queryset
    
@@ -147,7 +151,7 @@ class AdminCategoryListAPIView(ListAPIView):
         qs = (
             Category.objects
             .annotate(product_count=Count('products',distinct=True))
-            .order_by('-created_at')
+            .order_by('order','-updated_at')
         )
         
         if search:
@@ -189,6 +193,7 @@ class AdminProductExportAPIView(APIView):
         variant_mode = request.GET.get('variant_mode','all')
         include_summary = request.GET.get('include_summary','false').lower() == 'true'
         is_active = request.GET.get('is_active')
+        is_deals = request.GET.get('is_deals')
 
         
         products = Product.objects.select_related(
@@ -197,6 +202,9 @@ class AdminProductExportAPIView(APIView):
         
         if is_active is not None:
             products = products.filter(is_active=is_active.lower() == 'true')
+            
+        if is_deals is not None:
+            products = products.filter(is_deals=is_deals.lower() == 'true')
        
         if filter_type:
             variant_mode = 'all'
