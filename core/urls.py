@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('nammaooru-django-genkit-admin-portal-2026/', admin.site.urls),
 
     # app urls
     path('api/v1/products/',include('apps.products.urls')),
