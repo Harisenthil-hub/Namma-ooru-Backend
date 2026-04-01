@@ -8,11 +8,11 @@ class Category(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    
-    class Meta:
-        ordering = ['-updated_at']
+    order = models.PositiveIntegerField(default=0,db_index=True)
 
+    class Meta:
+        ordering = ['order']
+    
     def __str__(self):
         return self.name
     
@@ -23,7 +23,7 @@ class Product(models.Model):
         ordering = ['id']
         
 
-    name = models.CharField(max_length=100,db_index=True)
+    name = models.CharField(max_length=500,db_index=True)
     image = models.ImageField(upload_to='products/')
     category = models.ForeignKey(
         Category,

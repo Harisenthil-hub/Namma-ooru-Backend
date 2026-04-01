@@ -165,7 +165,7 @@ class CategoryListAPIView(ListAPIView):
         if data:
             return Response(data)
 
-        queryset = Category.objects.filter(is_active=True).order_by('-updated_at')
+        queryset = Category.objects.filter(is_active=True).order_by('order','-updated_at')
         serializer = self.get_serializer(queryset, many=True)
 
         cache.set(cache_key, serializer.data, timeout=3600)
