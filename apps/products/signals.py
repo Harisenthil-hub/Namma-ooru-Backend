@@ -8,7 +8,6 @@ from .models import Category, Product
 @receiver(post_save, sender=Category)
 @receiver(post_delete, sender=Category)
 def clear_category_cache(sender, **kwargs):
-    print(3456)
     cache.delete("category_list")
     cache.delete_pattern("products_*")
     cache.delete_pattern("search_suggestions_*")
@@ -20,6 +19,5 @@ def clear_category_cache(sender, **kwargs):
 @receiver(post_save, sender=Product)
 @receiver(post_delete, sender=Product)
 def clear_product_cache(sender, **kwargs):
-    print('dfdfdf')
     cache.delete_pattern("products_*")
     cache.delete_pattern("home_products")

@@ -94,7 +94,7 @@ class OrderItem(models.Model):
     variant = models.ForeignKey('products.ProductVariant',on_delete=models.PROTECT,blank=True,null=True,related_name='order_items')  # maybe its redudant
     variant_weight = models.CharField(max_length=50,blank=True,null=True)
 
-    product_name = models.CharField(max_length=200)
+    product_name = models.CharField(max_length=500)
     unit_price = models.DecimalField(max_digits=10,decimal_places=2)
     quantity = models.PositiveIntegerField()
     total_price = models.DecimalField(max_digits=10,decimal_places=2)
